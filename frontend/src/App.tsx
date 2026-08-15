@@ -1,122 +1,148 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import { useEffect, useRef, useState } from "react";
+import type { StreamEvent } from "./types";
+import "./App.css";
 
-function App() {
-  const [count, setCount] = useState(0)
+const GATEWAY_HTTP = "http://localhost:4000";
+const GATEWAY_WS = "ws://localhost:4000";
 
-  return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+const EVENT_COLORS: Record<string, string> = {
+  "user.created": "var(--signal)",
+  "user.updated": "var(--signal)",
+  "user.deleted": "var(--rose)",
+  "payment.succeeded": "var(--green)",
+  "payment.failed": "var(--rose)",
+};
 
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+function eventColor(name: string): string {
+  return EVENT_COLORS[name] ?? "var(--amber)";
 }
 
-export default App
+export default function App() {
+  const [events, setEvents] = useState<StreamEvent[]>([]);
+  const [connected, setConnected] = useState(false);
+  const [email, setEmail] = useState("");
+  const [name, setName] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+  const wsRef = useRef<WebSocket | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    function open() {
+      const ws = new WebSocket(GATEWAY_WS);
+      wsRef.current = ws;
+      ws.onopen = () => alive && setConnected(true);
+      ws.onclose = () => {
+        if (!alive) return;
+        setConnected(false);
+        setTimeout(open, 1500);
+      };
+      ws.onmessage = (msg) => {
+        const event = JSON.parse(msg.data) as StreamEvent;
+        setEvents((prev) => [event, ...prev].slice(0, 100));
+      };
+    }
+    open();
+    return () => {
+      alive = false;
+      wsRef.current?.close();
+    };
+  }, []);
+
+  async function createUser() {
+    if (!email || !name) {
+      setNotice("Enter a name and email first.");
+      return;
+    }
+    setBusy(true);
+    setNotice(null);
+    try {
+      const res = await fetch(`${GATEWAY_HTTP}/api/users`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, name }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        setNotice(err.error ?? "Could not create user.");
+      } else {
+        setEmail("");
+        setName("");
+      }
+    } catch {
+      setNotice("Gateway unavailable.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="shell">
+      <header className="topbar">
+        <div className="brand">
+          <span className="brand-mark" />
+          warren
+        </div>
+        <div className={`status ${connected ? "on" : "off"}`}>
+          <span className="dot" />
+          {connected ? "bus connected" : "reconnecting"}
+        </div>
+      </header>
+
+      <main className="grid">
+        <section className="panel compose">
+          <h2>Create a user</h2>
+          <p className="hint">
+            Publishes a <code>user.created</code> event. Watch it travel the bus.
+          </p>
+          <label>
+            Name
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Ada Lovelace"
+            />
+          </label>
+          <label>
+            Email
+            <input
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="ada@example.com"
+            />
+          </label>
+          <button onClick={createUser} disabled={busy}>
+            {busy ? "Publishing…" : "Create user"}
+          </button>
+          {notice && <p className="notice">{notice}</p>}
+        </section>
+
+        <section className="panel stream">
+          <div className="stream-head">
+            <h2>Live event stream</h2>
+            <span className="count">{events.length}</span>
+          </div>
+          <div className="spine">
+            {events.length === 0 && (
+              <p className="empty">No events yet. Create a user to begin.</p>
+            )}
+            {events.map((ev) => (
+              <article
+                key={ev.meta.id}
+                className="event"
+                style={{ ["--accent" as string]: eventColor(ev.meta.name) }}
+              >
+                <div className="event-line">
+                  <span className="event-name">{ev.meta.name}</span>
+                  <span className="event-source">{ev.meta.source}</span>
+                  <time>{new Date(ev.meta.timestamp).toLocaleTimeString()}</time>
+                </div>
+                <pre>{JSON.stringify(ev.payload, null, 2)}</pre>
+              </article>
+            ))}
+          </div>
+        </section>
+      </main>
+    </div>
+  );
+}
