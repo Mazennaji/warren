@@ -1,5 +1,10 @@
-import { useEffect, useRef, useState } from "react";
-import type { StreamEvent } from "./types";
+import { useCallback, useEffect, useRef, useState } from "react";
+import type {
+  StreamEvent,
+  User,
+  Customer,
+  Notification,
+} from "./types";
 import "./App.css";
 
 const GATEWAY_HTTP = "http://localhost:4000";
@@ -24,7 +29,31 @@ export default function App() {
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+
+  const [users, setUsers] = useState<User[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+
   const wsRef = useRef<WebSocket | null>(null);
+
+  const refreshData = useCallback(async () => {
+    try {
+      const [u, c, n] = await Promise.all([
+        fetch(`${GATEWAY_HTTP}/api/users`).then((r) => r.json()),
+        fetch(`${GATEWAY_HTTP}/api/customers`).then((r) => r.json()),
+        fetch(`${GATEWAY_HTTP}/api/notifications`).then((r) => r.json()),
+      ]);
+      setUsers(Array.isArray(u) ? u : []);
+      setCustomers(Array.isArray(c) ? c : []);
+      setNotifications(Array.isArray(n) ? n : []);
+    } catch {
+      // gateway not ready; ignore
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshData();
+  }, [refreshData]);
 
   useEffect(() => {
     let alive = true;
@@ -40,6 +69,7 @@ export default function App() {
       ws.onmessage = (msg) => {
         const event = JSON.parse(msg.data) as StreamEvent;
         setEvents((prev) => [event, ...prev].slice(0, 100));
+        refreshData();
       };
     }
     open();
@@ -47,7 +77,7 @@ export default function App() {
       alive = false;
       wsRef.current?.close();
     };
-  }, []);
+  }, [refreshData]);
 
   async function createUser() {
     if (!email || !name) {
@@ -143,6 +173,53 @@ export default function App() {
           </div>
         </section>
       </main>
+
+      <section className="tables">
+        <div className="panel">
+          <div className="stream-head">
+            <h2>Users</h2>
+            <span className="count">{users.length}</span>
+          </div>
+          <ul className="rows">
+            {users.map((u) => (
+              <li key={u.id}>
+                <span className="row-main">{u.name}</span>
+                <span className="row-sub">{u.email}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div className="panel">
+          <div className="stream-head">
+            <h2>Customers</h2>
+            <span className="count">{customers.length}</span>
+          </div>
+          <ul className="rows">
+            {customers.map((c) => (
+              <li key={c.id}>
+                <span className="row-main">{c.email}</span>
+                <span className="row-sub mono">{c.userId.slice(0, 8)}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div className="panel">
+          <div className="stream-head">
+            <h2>Notifications</h2>
+            <span className="count">{notifications.length}</span>
+          </div>
+          <ul className="rows">
+            {notifications.map((n) => (
+              <li key={n.id}>
+                <span className="row-main">{n.message}</span>
+                <span className="row-sub">{n.recipient}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
     </div>
   );
 }
