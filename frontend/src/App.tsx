@@ -110,7 +110,7 @@ export default function App() {
     <div className="shell">
       <header className="topbar">
         <div className="brand">
-          <img src="/favicon.png" className="brand-mark" alt="" />
+          <img src="/logo.png" className="brand-mark" alt="" />
             warren
           </div>
         <div className={`status ${connected ? "on" : "off"}`}>
