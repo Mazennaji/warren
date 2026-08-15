@@ -43,6 +43,14 @@ async function main() {
     res.json({ status: "ok", service: "users" });
   });
 
+  app.get("/users", async (_req, res) => {
+    const users = await prisma.user.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 20,
+    });
+    res.json(users);
+  });
+
   app.post("/users", async (req, res) => {
     const { email, name } = req.body ?? {};
     if (!email || !name) {
