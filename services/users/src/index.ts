@@ -1,5 +1,12 @@
 import express from "express";
-import { EVENT } from "@warren/shared";
+import { EVENT,
+  RPC_QUEUE,
+  RPC_METHOD,
+  serveRpc,
+  type RpcRequest,
+  type RpcResponse,
+  type IsVerifiedParams,
+} from "@warren/shared";
 import { prisma } from "./db.js";
 import { initPublisher, publish } from "./publisher.js";
 
@@ -7,6 +14,25 @@ const PORT = Number(process.env.USERS_PORT ?? 3001);
 
 async function main() {
   await initPublisher();
+
+  const rpcCtx = await connect();
+  await serveRpc(
+    rpcCtx.channel,
+    RPC_QUEUE.USERS,
+    async (req: RpcRequest): Promise<RpcResponse> => {
+      if (req.method === RPC_METHOD.IS_VERIFIED) {
+        const { userId } = req.params as unknown as IsVerifiedParams;
+        const user = await prisma.user.findUnique({ where: { id: userId } });
+        if (!user) return { ok: false, error: "user not found" };
+        return {
+          ok: true,
+          data: { userId: user.id, verified: user.verified },
+        };
+      }
+      return { ok: false, error: `unknown method: ${req.method}` };
+    }
+  );
+  console.log("users RPC server ready on", RPC_QUEUE.USERS);
 
   const app = express();
   app.use(express.json());
