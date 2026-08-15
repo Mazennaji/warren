@@ -11,8 +11,9 @@
     "prisma:migrate": "prisma migrate dev --name init"
   },
   "dependencies": {
-    "@warren/shared": "*",
     "@prisma/client": "^5.19.0",
+    "@warren/shared": "*",
+    "dotenv": "^17.4.2",
     "express": "^4.19.2"
   },
   "devDependencies": {

@@ -1,17 +1,18 @@
+import "dotenv/config";
+import type { Channel } from "amqplib";
 import {
   assertTopology,
   connect,
   consume,
   initIdempotency,
-  EVENT,
-  type DomainEvent,
-  type UserCreatedPayload,
   callRpc,
+  EVENT,
   RPC_QUEUE,
   RPC_METHOD,
+  type DomainEvent,
+  type UserCreatedPayload,
   type IsVerifiedResult,
 } from "@warren/shared";
-import type { Channel } from "amqplib";
 import { prisma } from "./db.js";
 
 async function handleEvent(
@@ -53,3 +54,8 @@ async function main() {
 
   console.log("billing service listening for user.* events");
 }
+
+main().catch((err) => {
+  console.error("failed to start billing service", err);
+  process.exit(1);
+});
