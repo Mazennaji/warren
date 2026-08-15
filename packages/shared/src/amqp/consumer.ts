@@ -1,6 +1,8 @@
 import type { Channel, ConsumeMessage } from "amqplib";
 import { EXCHANGE } from "../events/types.js";
 import type { DomainEvent } from "../events/types.js";
+import { assertConsumerQueue } from "./topology.js";
+import { alreadyProcessed } from "../idempotency/index.js";
 
 export interface ConsumerOptions {
   queue: string;
@@ -14,21 +16,24 @@ export async function consume(
 ): Promise<void> {
   const { queue, bindingKeys, onEvent } = options;
 
-  await channel.assertQueue(queue, { durable: true });
-  for (const key of bindingKeys) {
-    await channel.bindQueue(queue, EXCHANGE.EVENTS, key);
-  }
-
+  await assertConsumerQueue(channel, queue, bindingKeys);
   await channel.prefetch(10);
 
   await channel.consume(queue, async (msg) => {
     if (!msg) return;
     try {
       const event = JSON.parse(msg.content.toString()) as DomainEvent;
+
+      if (await alreadyProcessed(queue, event.meta.id)) {
+        console.log(`[${queue}] skipping duplicate ${event.meta.id}`);
+        channel.ack(msg);
+        return;
+      }
+
       await onEvent(event, msg);
       channel.ack(msg);
     } catch (err) {
-      console.error(`[${queue}] failed to process message`, err);
+      console.error(`[${queue}] processing failed, dead-lettering`, err);
       channel.nack(msg, false, false);
     }
   });
