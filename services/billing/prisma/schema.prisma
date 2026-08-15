@@ -1,0 +1,20 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["multiSchema"]
+  output          = "../node_modules/.prisma/client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  schemas  = ["billing"]
+}
+
+model Customer {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  email     String
+  createdAt DateTime @default(now())
+
+  @@schema("billing")
+}
