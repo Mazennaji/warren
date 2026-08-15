@@ -1,5 +1,4 @@
 import type { Channel, ConsumeMessage } from "amqplib";
-import { EXCHANGE } from "../events/types.js";
 import type { DomainEvent } from "../events/types.js";
 import { assertConsumerQueue } from "./topology.js";
 import { alreadyProcessed } from "../idempotency/index.js";
