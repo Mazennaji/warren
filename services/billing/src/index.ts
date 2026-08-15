@@ -1,4 +1,5 @@
 import "dotenv/config";
+import express from "express";
 import type { Channel } from "amqplib";
 import {
   assertTopology,
@@ -53,6 +54,19 @@ async function main() {
   });
 
   console.log("billing service listening for user.* events");
+
+  const app = express();
+  app.get("/customers", async (_req, res) => {
+    const customers = await prisma.customer.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 20,
+    });
+    res.json(customers);
+  });
+  const PORT = Number(process.env.BILLING_PORT ?? 3002);
+  app.listen(PORT, () =>
+    console.log(`billing HTTP on http://localhost:${PORT}`)
+  );
 }
 
 main().catch((err) => {
