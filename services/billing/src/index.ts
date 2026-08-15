@@ -2,6 +2,7 @@ import {
   assertTopology,
   connect,
   consume,
+  initIdempotency,
   EVENT,
   type DomainEvent,
   type UserCreatedPayload,
@@ -22,6 +23,7 @@ async function handleEvent(event: DomainEvent): Promise<void> {
 
 async function main() {
   const ctx = await connect();
+  await initIdempotency();
   await assertTopology(ctx.channel);
 
   await consume(ctx.channel, {
