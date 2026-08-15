@@ -1,4 +1,5 @@
 import "dotenv/config";
+import express from "express";
 import {
   assertTopology,
   connect,
@@ -41,6 +42,19 @@ async function main() {
   });
 
   console.log("notifications service listening for all events");
+
+  const app = express();
+  app.get("/notifications", async (_req, res) => {
+    const items = await prisma.notification.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 20,
+    });
+    res.json(items);
+  });
+  const PORT = Number(process.env.NOTIFICATIONS_PORT ?? 3003);
+  app.listen(PORT, () =>
+    console.log(`notifications HTTP on http://localhost:${PORT}`)
+  );
 }
 
 main().catch((err) => {
