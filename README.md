@@ -1,16 +1,24 @@
-# warren
+<p align="center">
+  <img src="docs/logo.png" alt="warren logo" width="180" />
+</p>
 
-> Event-driven microservices on RabbitMQ — a study in loose coupling, resilient messaging, and type-safe event contracts.
+<h1 align="center">warren</h1>
 
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![RabbitMQ](https://img.shields.io/badge/RabbitMQ-3.13-FF6600?logo=rabbitmq&logoColor=white)](https://www.rabbitmq.com/)
-[![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)](https://docs.docker.com/compose/)
-[![Node](https://img.shields.io/badge/Node-20%2B-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
-[![License](https://img.shields.io/badge/License-MIT-black)](./LICENSE)
+<p align="center">
+  Event-driven microservices on RabbitMQ — a study in loose coupling, resilient messaging, and type-safe event contracts.
+</p>
 
-Three independent services — **users**, **billing**, and **notifications** — that never call each other directly. They communicate purely through events flowing across a RabbitMQ message bus, demonstrating the patterns that keep distributed systems decoupled and resilient under failure. A React dashboard visualizes messages moving through the bus in real time.
+<p align="center">
+  <img src="https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript&logoColor=white" alt="TypeScript" />
+  <img src="https://img.shields.io/badge/RabbitMQ-3.13-FF6600?logo=rabbitmq&logoColor=white" alt="RabbitMQ" />
+  <img src="https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white" alt="Docker" />
+  <img src="https://img.shields.io/badge/Node-20%2B-339933?logo=node.js&logoColor=white" alt="Node" />
+  <img src="https://img.shields.io/badge/License-MIT-black" alt="License" />
+</p>
 
 ---
+
+Three independent services — **users**, **billing**, and **notifications** — that never call each other directly. They communicate purely through events flowing across a RabbitMQ message bus, demonstrating the patterns that keep distributed systems decoupled and resilient under failure. A React dashboard visualizes messages moving through the bus in real time.
 
 ## Why this exists
 
@@ -109,7 +117,7 @@ These are deliberate scope choices, not oversights — each has a well-understoo
 
 - **Save-then-publish gap.** A service writes to its database and then publishes an event as two separate steps. If the process dies between them, the write happens but the event is never sent. The production fix is the transactional outbox pattern.
 - **Per-call RPC reply queues.** The RPC client creates a temporary reply queue per call. A production client caches one reply queue per process and multiplexes by `correlationId`.
-- **Decoupling is real.** If billing is offline when a user is created, the user still exists — billing simply provisions the customer whenever it comes back and processes the queued event. (You'll notice this if you query the services after running some of them independently.)
+- **Decoupling is real.** If billing is offline when a user is created, the user still exists — billing provisions the customer whenever it comes back and processes the queued event.
 
 ## License
 
