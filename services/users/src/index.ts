@@ -6,6 +6,7 @@ import { EVENT,
   type RpcRequest,
   type RpcResponse,
   type IsVerifiedParams,
+  connect
 } from "@warren/shared";
 import { prisma } from "./db.js";
 import { initPublisher, publish } from "./publisher.js";
