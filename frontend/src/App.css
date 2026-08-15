@@ -38,10 +38,10 @@ body {
 }
 
 .brand-mark {
-  width: 12px; height: 12px;
-  background: var(--signal);
-  border-radius: 3px;
-  box-shadow: 0 0 12px var(--signal);
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 8px var(--signal));
 }
 
 .status {
