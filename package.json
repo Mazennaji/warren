@@ -1,0 +1,22 @@
+{
+  "name": "warren",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Event-driven microservices on RabbitMQ.",
+  "workspaces": [
+    "packages/*",
+    "services/*",
+    "gateway",
+    "frontend"
+  ],
+  "scripts": {
+    "up": "docker compose up -d",
+    "down": "docker compose down",
+    "logs": "docker compose logs -f",
+    "build": "npm run build --workspaces --if-present",
+    "dev": "npm run dev --workspaces --if-present"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
