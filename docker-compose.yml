@@ -6,8 +6,8 @@ services:
       - "5672:5672"
       - "15672:15672"
     environment:
-      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
-      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS:-guest}
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-admin}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS:-admin}
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
     healthcheck:
@@ -45,6 +45,124 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+  users:
+    build:
+      context: .
+      dockerfile: Dockerfile.service
+    container_name: warren-users
+    command: npm run dev -w @warren/users
+    ports:
+      - "3001:3001"
+    environment:
+      DATABASE_URL: postgresql://warren:warren@postgres:5432/warren?schema=users
+      RABBITMQ_URL: amqp://admin:admin@rabbitmq:5672
+      REDIS_URL: redis://redis:6379
+      USERS_PORT: 3001
+    volumes:
+      - ./packages:/app/packages
+      - ./services:/app/services
+      - ./gateway:/app/gateway
+      - /app/node_modules
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  billing:
+    build:
+      context: .
+      dockerfile: Dockerfile.service
+    container_name: warren-billing
+    command: npm run dev -w @warren/billing
+    ports:
+      - "3002:3002"
+    environment:
+      DATABASE_URL: postgresql://warren:warren@postgres:5432/warren?schema=billing
+      RABBITMQ_URL: amqp://admin:admin@rabbitmq:5672
+      REDIS_URL: redis://redis:6379
+      BILLING_PORT: 3002
+    volumes:
+      - ./packages:/app/packages
+      - ./services:/app/services
+      - ./gateway:/app/gateway
+      - /app/node_modules
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  notifications:
+    build:
+      context: .
+      dockerfile: Dockerfile.service
+    container_name: warren-notifications
+    command: npm run dev -w @warren/notifications
+    ports:
+      - "3003:3003"
+    environment:
+      DATABASE_URL: postgresql://warren:warren@postgres:5432/warren?schema=notifications
+      RABBITMQ_URL: amqp://admin:admin@rabbitmq:5672
+      REDIS_URL: redis://redis:6379
+      NOTIFICATIONS_PORT: 3003
+    volumes:
+      - ./packages:/app/packages
+      - ./services:/app/services
+      - ./gateway:/app/gateway
+      - /app/node_modules
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile.service
+    container_name: warren-gateway
+    command: npm run dev -w @warren/gateway
+    ports:
+      - "4000:4000"
+    environment:
+      RABBITMQ_URL: amqp://admin:admin@rabbitmq:5672
+      GATEWAY_PORT: 4000
+      USERS_SERVICE_URL: http://users:3001
+      BILLING_SERVICE_URL: http://billing:3002
+      NOTIFICATIONS_SERVICE_URL: http://notifications:3003
+    volumes:
+      - ./packages:/app/packages
+      - ./services:/app/services
+      - ./gateway:/app/gateway
+      - /app/node_modules
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      users:
+        condition: service_started
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    container_name: warren-frontend
+    command: npm run dev -w @warren/frontend -- --host
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app/frontend
+      - /app/node_modules
+    depends_on:
+      gateway:
+        condition: service_started
 
 volumes:
   rabbitmq_data:
